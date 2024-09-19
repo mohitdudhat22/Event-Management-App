@@ -3,9 +3,13 @@ import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { createTheme } from '@mui/material/styles';
-import DescriptionIcon from '@mui/icons-material/Description';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
+import HomeIcon from '@mui/icons-material/Home';
+import EventIcon from '@mui/icons-material/Event';
+import PeopleIcon from '@mui/icons-material/People';
+import SettingsIcon from '@mui/icons-material/Settings';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 
 const demoTheme = createTheme({
   cssVariables: {
@@ -61,18 +65,36 @@ function DashboardLayoutNavigationLinks(props) {
 
   return (
     <AppProvider
-      navigation={[
-        {
-          segment: 'home',
-          title: 'Home',
-          icon: <DescriptionIcon />,
-        },
-        {
-          segment: 'about',
-          title: 'About Us',
-          icon: <DescriptionIcon />,
-        },
-      ]}
+  
+    navigation={[
+      {
+        segment: 'home',
+        title: 'Dashboard',
+        icon: <HomeIcon />,
+      },
+      {
+        segment: 'events',
+        title: 'Events',
+        icon: <EventIcon />,
+      },
+      {
+        segment: 'attendees',
+        title: 'Attendees',
+        icon: <PeopleIcon />,
+      },
+      {
+        segment: 'booked Events',
+        title: 'Booked Events',
+        icon: <BookmarkIcon />,
+      },
+
+
+      {
+        segment: 'settings',
+        title: 'Settings',
+        icon: <SettingsIcon />,
+      },
+    ]}
       router={router}
       theme={demoTheme}
       window={demoWindow}
