@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { format, isBefore, isAfter, parseISO, isToday } from "date-fns";
-import TextField from '@mui/material/TextField'; // Add this import
+import { format, isBefore, isAfter, parseISO, isToday, startOfDay } from "date-fns";
+import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { styled } from '@mui/material/styles';
 import { Box } from "@mui/material";
-import Grid from '@mui/material/Grid'; // Add this import at the top of the file
+import Grid from '@mui/material/Grid';
 import InputAdornment from '@mui/material/InputAdornment';
+import BookedEvents from './BookedEvents';
 
-// Add this styled component for the visually hidden input
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
   clipPath: 'inset(50%)',
@@ -22,46 +22,93 @@ const VisuallyHiddenInput = styled('input')({
 });
 
 function Event() {
-  const [events, setEvents] = useState({ upcoming: [], today: [], past: [] });
+  const [events, setEvents] = useState({ upcoming: [], today: [], past: [], booked: [] });
   const [event, setEvent] = useState({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [user, setUser] = useState({ name: "John Doe", role: "admin" }); // Example user data
+  const [user, setUser] = useState({ name: "John Doe", role: "admin" });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     categorizeEvents();
-  }, [events]);
+  }, []);
+
+  const determineEventStatus = (date) => {
+    const eventDate = parseISO(date);
+    const now = new Date();
+    if (isBefore(eventDate, now) && !isToday(eventDate)) {
+      return 'past';
+    } else if (isAfter(eventDate, now) && !isToday(eventDate)) {
+      return 'upcoming';
+    } else {
+      return 'today';
+    }
+  };
 
   const categorizeEvents = () => {
-    const now = new Date();
-    const upcoming = [];
-    const today = [];
-    const past = [];
+    const categorized = {
+      upcoming: [],
+      today: [],
+      past: [],
+      booked: events.booked
+    };
 
     events.upcoming.concat(events.today, events.past).forEach(event => {
-      const eventDate = parseISO(event.date);
-      if (isBefore(eventDate, now) && !isToday(eventDate)) {
-        past.push(event);
-      } else if (isAfter(eventDate, now) && !isToday(eventDate)) {
-        upcoming.push(event);
-      } else if (isToday(eventDate)) {
-        today.push(event);
-      }
+      const status = determineEventStatus(event.date);
+      categorized[status].push(event);
     });
 
-    setEvents({ upcoming, today, past });
+    setEvents(categorized);
+  };
+
+  const validateForm = () => {
+    let tempErrors = {};
+    tempErrors.title = event.title ? "" : "Title is required";
+    tempErrors.description = event.description ? "" : "Description is required";
+    tempErrors.location = event.location ? "" : "Location is required";
+    tempErrors.maxAttendees = event.maxAttendees > 0 ? "" : "Max attendees must be greater than 0";
+    
+    // Date validation
+    const today = startOfDay(new Date());
+    const eventDate = parseISO(event.date);
+    if (!event.date) {
+      tempErrors.date = "Date is required";
+    } else if (isBefore(eventDate, today)) {
+      tempErrors.date = "Event date cannot be in the past";
+    }
+    
+    setErrors(tempErrors);
+    return Object.values(tempErrors).every(x => x === "");
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      if (isEditing) {
+        updateEvent();
+      } else {
+        addEvent();
+      }
+    } else {
+      toast.error("Please fill all required fields correctly.");
+    }
   };
 
   const addEvent = () => {
-    if (event.title.trim() === "") return;
-
-    const newEvent = { ...event, id: Date.now().toString() };
-    setEvents(prev => ({
-      ...prev,
-      upcoming: [...prev.upcoming, newEvent]
-    }));
-    setEvent({ title: "", description: "", date: "", location: "", maxAttendees: 0, imageUrl: "" });
-    toast.success("Event added successfully!");
+    if (validateForm()) {
+      const newEvent = { ...event, id: Date.now().toString() };
+      const status = determineEventStatus(newEvent.date);
+      
+      setEvents(prev => ({
+        ...prev,
+        [status]: [...prev[status], newEvent]
+      }));
+      
+      setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
+      toast.success("Event added successfully!");
+    } else {
+      toast.error("Please fill all required fields correctly.");
+    }
   };
 
   const deleteEvent = (id, status) => {
@@ -89,12 +136,68 @@ function Event() {
     }));
     setIsEditing(false);
     setEditId(null);
-    setEvent({ title: "", description: "", date: "", location: "", maxAttendees: 0, imageUrl: "" });
+    setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
     toast.success("Event updated successfully!");
   };
 
   const reserveTicket = (id, status) => {
-    toast.success("Ticket reserved successfully!");
+    if (status === 'past') {
+      toast.error("Cannot book tickets for past events.");
+      return;
+    }
+
+    const eventToBook = events[status].find(event => event.id === id);
+    if (eventToBook) {
+      setEvents(prev => {
+        const existingBooking = prev.booked.find(event => event.id === id);
+        if (existingBooking) {
+          // If already booked, increase the ticket count
+          return {
+            ...prev,
+            booked: prev.booked.map(event => 
+              event.id === id 
+                ? { ...event, ticketCount: (event.ticketCount || 1) + 1 }
+                : event
+            )
+          };
+        } else {
+          // If not booked yet, add to booked events with ticket count 1
+          return {
+            ...prev,
+            booked: [...prev.booked, { ...eventToBook, ticketCount: 1 }]
+          };
+        }
+      });
+      toast.success("Ticket reserved successfully!");
+    }
+  };
+
+  const cancelReservation = (id) => {
+    setEvents(prev => {
+      const bookedEvent = prev.booked.find(event => event.id === id);
+      if (bookedEvent.ticketCount > 1) {
+        // If more than one ticket, decrease the count
+        return {
+          ...prev,
+          booked: prev.booked.map(event => 
+            event.id === id 
+              ? { ...event, ticketCount: event.ticketCount - 1 }
+              : event
+          )
+        };
+      } else {
+        // If only one ticket, remove from booked and add back to appropriate category
+        const updatedBooked = prev.booked.filter(event => event.id !== id);
+        const eventToReturn = { ...bookedEvent, ticketCount: undefined };
+        const returnCategory = determineEventStatus(eventToReturn.date);
+        return {
+          ...prev,
+          booked: updatedBooked,
+          [returnCategory]: [...prev[returnCategory], eventToReturn]
+        };
+      }
+    });
+    toast.success("Reservation cancelled successfully!");
   };
 
   const handleImageUpload = (event) => {
@@ -105,6 +208,19 @@ function Event() {
         setEvent({ ...event, imageUrl: reader.result });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const selectedDate = e.target.value;
+    const today = startOfDay(new Date());
+    const eventDate = parseISO(selectedDate);
+    
+    if (!isBefore(eventDate, today)) {
+      setEvent({ ...event, date: selectedDate });
+      setErrors({ ...errors, date: "" });
+    } else {
+      setErrors({ ...errors, date: "Event date cannot be in the past" });
     }
   };
 
@@ -147,13 +263,13 @@ function Event() {
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       {isEditing || user.role === "admin" ? (
-         <Box
-         component="form"
-         sx={{ '& .MuiTextField-root': { m: 1 } }}
-         noValidate
-         autoComplete="off"
-       >
-        <form onSubmit={(e) => e.preventDefault()} className="mb-8 flex flex-col gap-4">
+        <Box
+          component="form"
+          sx={{ '& .MuiTextField-root': { m: 1 } }}
+          noValidate
+          autoComplete="off"
+          onSubmit={handleSubmit}
+        >
           <TextField
             label="Event Title"
             variant="outlined"
@@ -162,6 +278,8 @@ function Event() {
             onChange={(e) => setEvent({ ...event, title: e.target.value })}
             fullWidth
             sx={inputStyle}
+            error={!!errors.title}
+            helperText={errors.title}
           />
           <TextField
             label="Event Description"
@@ -173,6 +291,8 @@ function Event() {
             rows={4}
             fullWidth
             sx={inputStyle}
+            error={!!errors.description}
+            helperText={errors.description}
           />
           <TextField
             label="Event Date"
@@ -180,10 +300,15 @@ function Event() {
             size="small"
             type="date"
             value={event.date}
-            onChange={(e) => setEvent({ ...event, date: e.target.value })}
+            onChange={handleDateChange}
             InputLabelProps={{ shrink: true }}
             fullWidth
             sx={inputStyle}
+            error={!!errors.date}
+            helperText={errors.date}
+            inputProps={{
+              min: format(new Date(), 'yyyy-MM-dd')
+            }}
           />
           <TextField
             label="Event Location"
@@ -193,6 +318,8 @@ function Event() {
             onChange={(e) => setEvent({ ...event, location: e.target.value })}
             fullWidth
             sx={inputStyle}
+            error={!!errors.location}
+            helperText={errors.location}
           />
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} sm={6}>
@@ -208,6 +335,8 @@ function Event() {
                 InputProps={{
                   endAdornment: <InputAdornment position="end">people</InputAdornment>,
                 }}
+                error={!!errors.maxAttendees}
+                helperText={errors.maxAttendees}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -225,14 +354,14 @@ function Event() {
               </Button>
             </Grid>
           </Grid>
-          <button
-            type="button"
-            onClick={isEditing ? updateEvent : addEvent}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg transition duration-300 ease-in-out min-w-[100px]"
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            sx={{ mt: 2 }}
           >
             {isEditing ? "Update" : "Add"}
-          </button>
-        </form>
+          </Button>
         </Box>
       ) : null}
       <div className="flex flex-col md:flex-row gap-6">
@@ -247,12 +376,14 @@ function Event() {
                   <p className="text-gray-600">{format(parseISO(event.date), 'PPP')}</p>
                   <p className="text-gray-600">Max Attendees: {event.maxAttendees}</p>
                   <div className="flex space-x-2 mt-4">
-                    <button
-                      onClick={() => reserveTicket(event.id, status)}
-                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full text-sm transition duration-300 ease-in-out"
-                    >
-                      Reserve Ticket
-                    </button>
+                    {status !== 'past' && (
+                      <button
+                        onClick={() => reserveTicket(event.id, status)}
+                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full text-sm transition duration-300 ease-in-out"
+                      >
+                        Reserve Ticket
+                      </button>
+                    )}
                     {user.role === "admin" && (
                       <>
                         <button
@@ -275,6 +406,10 @@ function Event() {
             ))}
           </div>
         ))}
+        <BookedEvents 
+          bookedEvents={events.booked} 
+          cancelReservation={cancelReservation} 
+        />
       </div>
     </div>
   );
