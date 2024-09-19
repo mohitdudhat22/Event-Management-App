@@ -2,8 +2,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const dbConnect = require('./config/dbConnect');
 const cors = require('cors');
-const taskRouter = require('./router/taskRoutes');
-const authRouter = require('./router/authRoutes');
+const taskRouter = require('./router/EventsRoutes');
+const authRouter = require('./router/UserRoutes');
 const notificationRoutes = require('./router/notificationRoutes');
 const teamRoute = require('./router/teamRoutes')
 const { initSocket } = require('./socket');
@@ -24,10 +24,8 @@ app.use(cors({
     credentials: true
 }));
 
-app.use('/notifications', notificationRoutes);
-app.use('/api', taskRouter);
-app.use('/api/auth', authRouter);
-app.use('/team',teamRoute )
+app.use('/api/events', require('./routes/events'));
+app.use('/api/users', authMiddleware, require('./routes/users'));
 
 app.get('/health-check', (req, res) => {
     return res.send("Server is On");
