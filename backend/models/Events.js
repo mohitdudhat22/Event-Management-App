@@ -8,7 +8,9 @@ const EventSchema = new mongoose.Schema({
   maxAttendees: { type: Number, required: true },
   imageUrl: { type: String },
   status: { type: String, enum: ['upcoming', 'today', 'past'], required: true },
-  ticketCount: { type: Number, default: 0 }
+  ticketsSold: { type: Number, default: 0 },
+  creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  tickets: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', EventSchema);
