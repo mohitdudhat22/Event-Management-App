@@ -1,25 +1,19 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { format, isBefore, isAfter, parseISO, isToday, startOfDay } from "date-fns";
+import { format, isBefore, isAfter, parseISO, startOfDay, isValid } from "date-fns";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { styled } from '@mui/material/styles';
 import { Box } from "@mui/material";
 import Grid from '@mui/material/Grid';
 import InputAdornment from '@mui/material/InputAdornment';
 import BookedEvents from './BookedEvents';
+import axios from 'axios';
+import { inputStyle, VisuallyHiddenInput } from "./config";
 
-const VisuallyHiddenInput = styled('input')({
-  clip: 'rect(0 0 0 0)',
-  clipPath: 'inset(50%)',
-  overflow: 'hidden',
-  position: 'absolute',
-  bottom: 0,
-  left: 0,
-  whiteSpace: 'nowrap',
-  width: '50%',
-});
+
+//vite env acceass
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 function Event() {
   const [events, setEvents] = useState({ upcoming: [], today: [], past: [], booked: [] });
@@ -30,35 +24,73 @@ function Event() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    categorizeEvents();
+    fetchEvents();
+    getUserTickets();
   }, []);
 
-  const determineEventStatus = (date) => {
-    const eventDate = parseISO(date);
-    const now = new Date();
-    if (isBefore(eventDate, now) && !isToday(eventDate)) {
-      return 'past';
-    } else if (isAfter(eventDate, now) && !isToday(eventDate)) {
-      return 'upcoming';
-    } else {
-      return 'today';
+  const fetchEvents = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/events`);
+      console.log(response.data);
+      const formattedEvents = response.data.events.map(event => ({
+        ...event,
+        date: format(parseISO(event.date), 'yyyy-MM-dd')
+      }));
+      categorizeEvents(formattedEvents);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast.error('Failed to fetch events');
     }
   };
-
-  const categorizeEvents = () => {
+  const getUserTickets = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/events/user/tickets`,{withCredentials: true});
+      console.log(response.data);
+    } catch (error) {
+      console.error('Error fetching user tickets:', error);
+      toast.error('Failed to fetch user tickets');
+    }
+  };
+  const categorizeEvents = (eventList) => {
     const categorized = {
       upcoming: [],
       today: [],
       past: [],
-      booked: events.booked
+      booked: []
     };
 
-    events.upcoming.concat(events.today, events.past).forEach(event => {
+    eventList.forEach(event => {
       const status = determineEventStatus(event.date);
       categorized[status].push(event);
     });
-
     setEvents(categorized);
+  };
+  const determineEventStatus = (date) => {
+    if (!date) {
+      console.error('No date provided');
+      return 'upcoming'; // Default to 'upcoming' or handle as appropriate
+    }
+
+    try {
+      const eventDate = parseISO(date);
+      if (!isValid(eventDate)) {
+        console.error('Invalid date provided:', date);
+        return 'upcoming';
+      }
+
+      const now = new Date();
+      
+      if (isBefore(eventDate, startOfDay(now))) {
+        return 'past';
+      } else if (isAfter(eventDate, now)) {
+        return 'upcoming';
+      } else {
+        return 'today';
+      }
+    } catch (error) {
+      console.error('Error processing date:', error);
+      return 'upcoming';
+    }
   };
 
   const validateForm = () => {
@@ -66,21 +98,25 @@ function Event() {
     tempErrors.title = event.title ? "" : "Title is required";
     tempErrors.description = event.description ? "" : "Description is required";
     tempErrors.location = event.location ? "" : "Location is required";
-    tempErrors.maxAttendees = event.maxAttendees > 0 ? "" : "Max attendees must be greater than 0";
+    tempErrors.maxAttendees = event.maxAttendees && parseInt(event.maxAttendees, 10) > 0 
+      ? "" 
+      : "Max attendees must be a positive number";
     
     // Date validation
-    const today = startOfDay(new Date());
-    const eventDate = parseISO(event.date);
     if (!event.date) {
       tempErrors.date = "Date is required";
-    } else if (isBefore(eventDate, today)) {
-      tempErrors.date = "Event date cannot be in the past";
+    } else {
+      const parsedDate = parseISO(event.date);
+      if (!isValid(parsedDate)) {
+        tempErrors.date = "Invalid date format";
+      } else if (isBefore(parsedDate, startOfDay(new Date()))) {
+        tempErrors.date = "Event date cannot be in the past";
+      }
     }
-    
+  
     setErrors(tempErrors);
     return Object.values(tempErrors).every(x => x === "");
   };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
@@ -94,110 +130,154 @@ function Event() {
     }
   };
 
-  const addEvent = () => {
+  const addEvent = async () => {
     if (validateForm()) {
-      const newEvent = { ...event, id: Date.now().toString() };
-      const status = determineEventStatus(newEvent.date);
-      
-      setEvents(prev => ({
-        ...prev,
-        [status]: [...prev[status], newEvent]
-      }));
-      
-      setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
-      toast.success("Event added successfully!");
-    } else {
-      toast.error("Please fill all required fields correctly.");
+      try {
+        const eventData = {
+          ...event,
+          maxAttendees: parseInt(event.maxAttendees, 10),
+          imageUrl: event.imageUrl || "",
+          date: parseISO(event.date).toISOString(),
+          status: determineEventStatus(event.date), 
+        };
+        console.log(eventData, "eventData");
+
+        const response = await axios.post(`${API_BASE_URL}/api/events`, eventData, {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        const newEvent = response.data;
+        setEvents(prev => {
+          const updatedCategory = prev[newEvent.status] ? [...prev[newEvent.status], newEvent] : [newEvent];
+          return {
+            ...prev,
+            [newEvent.status]: updatedCategory
+          };
+        });
+        
+        setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
+        toast.success("Event added successfully!");
+      } catch (error) {
+        console.error("Error adding event:", error);
+        toast.error(error.response?.data?.message || "Failed to add event");
+      }
     }
   };
 
-  const deleteEvent = (id, status) => {
-    setEvents(prev => ({
-      ...prev,
-      [status]: prev[status].filter(event => event.id !== id)
-    }));
-    toast.success("Event deleted!");
+  const deleteEvent = async (id, status) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/events/${id}`, {
+        withCredentials: true
+      });
+      setEvents(prev => ({
+        ...prev,
+        [status]: prev[status].filter(event => event._id !== id)
+      }));
+      toast.success("Event deleted!");
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event");
+    }
   };
 
   const editEvent = (id, status) => {
     setIsEditing(true);
     setEditId(id);
-    const eventToEdit = events[status].find(event => event.id === id);
+    const eventToEdit = events[status].find(event => event._id === id);
     setEvent(eventToEdit);
   };
 
-  const updateEvent = () => {
-    const updatedEvent = { ...event, id: editId };
-    setEvents(prev => ({
-      ...prev,
-      upcoming: prev.upcoming.map(item => item.id === editId ? updatedEvent : item),
-      today: prev.today.map(item => item.id === editId ? updatedEvent : item),
-      past: prev.past.map(item => item.id === editId ? updatedEvent : item)
-    }));
-    setIsEditing(false);
-    setEditId(null);
-    setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
-    toast.success("Event updated successfully!");
+  const updateEvent = async () => {
+    console.log(editId, "event");
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/events/${editId}`, event, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const updatedEvent = response.data.updatedEvent;
+      console.log(updatedEvent, "updatedEvent");
+      setEvents(prev => ({
+        ...prev,
+        upcoming: prev.upcoming.map(item => item._id === editId ? updatedEvent : item),
+        today: prev.today.map(item => item._id === editId ? updatedEvent : item),
+        past: prev.past.map(item => item._id === editId ? updatedEvent : item)
+      }));
+      setIsEditing(false);
+      setEditId(null);
+      setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
+      toast.success("Event updated successfully!");
+    } catch (error) {
+      console.error("Error updating event:", error);
+      toast.error("Failed to update event");
+    }
   };
 
-  const reserveTicket = (id, status) => {
+  const reserveTicket = async (id, status) => {
     if (status === 'past') {
       toast.error("Cannot book tickets for past events.");
       return;
     }
 
-    const eventToBook = events[status].find(event => event.id === id);
-    if (eventToBook) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/events/buy/${id}`, {}, {
+        withCredentials: true
+      });
+      const updatedEvent = response.data.event;
       setEvents(prev => {
-        const existingBooking = prev.booked.find(event => event.id === id);
-        if (existingBooking) {
-          // If already booked, increase the ticket count
+        const isAlreadyBooked = prev.booked.some(event => event._id === id);
+        
+        if (isAlreadyBooked) {
+          // Increase ticket count for already booked event
+          const updatedBooked = prev.booked.map(event => 
+            event._id === id 
+              ? { ...event, ticketCount: (event.ticketCount || 1) + 1 }
+              : event
+          );
           return {
             ...prev,
-            booked: prev.booked.map(event => 
-              event.id === id 
-                ? { ...event, ticketCount: (event.ticketCount || 1) + 1 }
-                : event
-            )
+            [status]: prev[status].map(event => event._id === id ? updatedEvent : event),
+            booked: updatedBooked
           };
         } else {
-          // If not booked yet, add to booked events with ticket count 1
+          // Add new booked event
           return {
             ...prev,
-            booked: [...prev.booked, { ...eventToBook, ticketCount: 1 }]
+            [status]: prev[status].map(event => event._id === id ? updatedEvent : event),
+            booked: [...prev.booked, { ...updatedEvent, ticketCount: 1 }]
           };
         }
       });
       toast.success("Ticket reserved successfully!");
+    } catch (error) {
+      console.error("Error reserving ticket:", error);
+      toast.error("Failed to reserve ticket");
     }
   };
 
-  const cancelReservation = (id) => {
-    setEvents(prev => {
-      const bookedEvent = prev.booked.find(event => event.id === id);
-      if (bookedEvent.ticketCount > 1) {
-        // If more than one ticket, decrease the count
-        return {
-          ...prev,
-          booked: prev.booked.map(event => 
-            event.id === id 
-              ? { ...event, ticketCount: event.ticketCount - 1 }
-              : event
-          )
-        };
-      } else {
-        // If only one ticket, remove from booked and add back to appropriate category
-        const updatedBooked = prev.booked.filter(event => event.id !== id);
-        const eventToReturn = { ...bookedEvent, ticketCount: undefined };
-        const returnCategory = determineEventStatus(eventToReturn.date);
+  const cancelReservation = async (id) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/events/${id}/cancel`, {}, {
+        withCredentials: true
+      });
+      const updatedEvent = response.data;
+      setEvents(prev => {
+        const updatedBooked = prev.booked.filter(event => event._id !== id);
+        const returnCategory = determineEventStatus(updatedEvent.date);
         return {
           ...prev,
           booked: updatedBooked,
-          [returnCategory]: [...prev[returnCategory], eventToReturn]
+          [returnCategory]: [...prev[returnCategory], updatedEvent]
         };
-      }
-    });
-    toast.success("Reservation cancelled successfully!");
+      });
+      toast.success("Reservation cancelled successfully!");
+    } catch (error) {
+      console.error("Error cancelling reservation:", error);
+      toast.error("Failed to cancel reservation");
+    }
   };
 
   const handleImageUpload = (event) => {
@@ -212,52 +292,13 @@ function Event() {
   };
 
   const handleDateChange = (e) => {
-    const selectedDate = e.target.value;
-    const today = startOfDay(new Date());
-    const eventDate = parseISO(selectedDate);
-    
-    if (!isBefore(eventDate, today)) {
-      setEvent({ ...event, date: selectedDate });
-      setErrors({ ...errors, date: "" });
+    const inputDate = e.target.value;
+    if (inputDate) {
+      const formattedDate = format(parseISO(inputDate), 'yyyy-MM-dd');
+      setEvent({ ...event, date: formattedDate });
     } else {
-      setErrors({ ...errors, date: "Event date cannot be in the past" });
+      setEvent({ ...event, date: '' });
     }
-  };
-
-  const inputStyle = {
-    '& .MuiOutlinedInput-root': {
-      backgroundColor: '#2a2a2a',
-      borderRadius: '8px',
-      transition: 'background-color 0.3s, box-shadow 0.3s',
-      '&:hover': {
-        backgroundColor: '#333333',
-      },
-      '&.Mui-focused': {
-        backgroundColor: '#333333',
-        '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: '#90caf9',
-        },
-      },
-    },
-    '& .MuiOutlinedInput-input': {
-      color: '#ffffff',
-      '&::placeholder': {
-        color: '#999999',
-        opacity: 1,
-      },
-    },
-    '& .MuiInputLabel-root': {
-      color: '#b0bec5',
-      '&.Mui-focused': {
-        color: '#90caf9',
-      },
-    },
-    '& .MuiInputAdornment-root': {
-      color: '#b0bec5',
-    },
-    '& .MuiFormHelperText-root': {
-      color: '#b0bec5',
-    },
   };
 
   return (
@@ -369,7 +410,7 @@ function Event() {
           <div key={status} className="flex-1 p-4 bg-gray-100 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-4 capitalize text-gray-700">{status} Events</h2>
             {events[status].map((event) => (
-              <div key={event.id} className="bg-white p-4 mb-4 rounded-lg shadow-sm hover:shadow-md transition duration-300 ease-in-out">
+              <div key={event._id} className="bg-white p-4 mb-4 rounded-lg shadow-sm hover:shadow-md transition duration-300 ease-in-out">
                 <img src={event.imageUrl} alt={event.title} className="w-full h-48 object-cover rounded-t-lg" />
                 <div className="p-4">
                   <h3 className="text-lg font-bold">{event.title}</h3>
@@ -378,7 +419,7 @@ function Event() {
                   <div className="flex space-x-2 mt-4">
                     {status !== 'past' && (
                       <button
-                        onClick={() => reserveTicket(event.id, status)}
+                        onClick={() => reserveTicket(event._id, status)}
                         className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full text-sm transition duration-300 ease-in-out"
                       >
                         Reserve Ticket
@@ -387,13 +428,13 @@ function Event() {
                     {user.role === "admin" && (
                       <>
                         <button
-                          onClick={() => editEvent(event.id, status)}
+                          onClick={() => editEvent(event._id, status)}
                           className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm transition duration-300 ease-in-out"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => deleteEvent(event.id, status)}
+                          onClick={() => deleteEvent(event._id, status)}
                           className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full text-sm transition duration-300 ease-in-out"
                         >
                           Delete

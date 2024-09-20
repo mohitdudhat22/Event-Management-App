@@ -4,6 +4,7 @@ dotenv.config();
 
 const authMiddleware = async (req, res, next) => {
     const token = req.cookies.token;
+    console.log(req.cookies, "<<< from the middleware");
     if (!token) {
         return res.status(401).json({ message: 'Unauthorized' });
     }

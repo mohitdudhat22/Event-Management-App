@@ -4,7 +4,7 @@ const User = require('../models/User');
 const getAllEvents = async (req, res) => {
   try {
     const events = await Event.find();
-    res.json({ message: 'Events fetched successfully', events });
+    res.json({ message: 'Events fetched successfully', events});
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -20,9 +20,9 @@ const getEventById = async (req, res) => {
 };
 
 const createEvent = async (req, res) => {
-    const { title, description, date, location, maxAttendees, imageUrl,creator, status} = req.body;
+    const { title, description, date, location, maxAttendees, imageUrl, status} = req.body;
     try {
-        const newEvent = await Event.create({ title, description, date, location, maxAttendees, imageUrl, creator, status, ticketsSold: 0 , tickets: [] , status});
+        const newEvent = await Event.create({ title, description, date, location, maxAttendees, imageUrl, creator: req.user.id, status, ticketsSold: 0 , tickets: [] , status});
         newEvent.save();
         console.log(newEvent , "<<<<<<<<<<<<<<<<<<<<<<<<<<<< newEvent");
         res.status(201).json({ message: 'Event created successfully', newEvent });
@@ -36,8 +36,8 @@ const updateEvent = async (req, res) => {
     const { title, description, date, location, maxAttendees, imageUrl, status} = req.body;
 
     try {
-       await Event.findByIdAndUpdate(id, { title, description, date, location, maxAttendees, imageUrl, status});
-       const updatedEvent = updatedEvent.save();
+       const updatedEvent = await Event.findByIdAndUpdate(id, { title, description, date, location, maxAttendees, imageUrl, status});
+       updatedEvent.save();
         res.json({ message: 'Event updated successfully', updatedEvent });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -102,6 +102,8 @@ const buyTicket = async (req, res) => {
 
         if (ticket) {
             event.ticketsSold++;
+            ticket.quantity++;
+            await ticket.save();
             await event.save();
             return res.json({ message: 'Ticket bought successfully (Added in existing ticket)', event });
         }
@@ -126,9 +128,12 @@ const buyTicket = async (req, res) => {
 };
 
 const getUserTickets = async (req, res) => {
-    console.log("IN getUserTickets")
+    console.log(req.user)
     try {
     const tickets = await Ticket.find({ user: req.user.id });
+    const user = await User.findById(req.user.id);
+    const events = await Event.find({ creator: user.id });
+    console.log(tickets, "<<<<<< in User Tickets")
     
       res.json(tickets);
     } catch (err) {
