@@ -7,6 +7,7 @@ import { EventProvider } from './context/EventContext';
 import './App.css';
 import Dashboard from './Dashboard';
 import Layout from './Layout';
+import Login from './Login';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -23,6 +24,8 @@ function App() {
           <Layout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
               <Routes>
                 <Route path="dashboard/*" element={<Dashboard />} />
+                <Route path="/" element={<Login />} />
+                <Route path="/register" element={<Register />} />
               </Routes>
             </Layout>
           </BrowserRouter>
