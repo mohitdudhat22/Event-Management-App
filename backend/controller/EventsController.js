@@ -48,6 +48,7 @@ const deleteEvent = async (req, res) => {
     const id = req.params.id;
     try {
         const deletedEvent = await Event.findByIdAndDelete(id);
+        await Ticket.deleteMany({ event: id });
         if (!deletedEvent) {
             return res.status(404).json({ error: 'Event not found' });
         }
@@ -128,16 +129,24 @@ const buyTicket = async (req, res) => {
 };
 
 const getUserTickets = async (req, res) => {
-    console.log(req.user)
     try {
-    const tickets = await Ticket.find({ user: req.user.id });
-    const user = await User.findById(req.user.id);
-    const events = await Event.find({ creator: user.id });
-    console.log(tickets, "<<<<<< in User Tickets")
-    
-      res.json(tickets);
+        const tickets = await Ticket.find({ user: req.user.id })
+            .populate('event')
+            .lean();
+
+        const user = await User.findById(req.user.id);
+        const createdEvents = await Event.find({ creator: user.id });
+
+        const ticketsWithEvents = tickets.map(ticket => ({
+            ...ticket,
+            event: ticket.event,
+            isCreator: createdEvents.some(event => event._id.toString() === ticket.event._id.toString())
+        }));
+
+        console.log(ticketsWithEvents, "<<<<<< User Tickets with Event Details");
+        res.json(ticketsWithEvents);
     } catch (err) {
-      res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.message });
     }
 };
 

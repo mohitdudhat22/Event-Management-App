@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme';
 import { EventProvider } from './context/EventContext';
 import './App.css';
-import Login from './Login';
-import Registration from './Registration';
-import Event from './Event';
+import Dashboard from './Dashboard';
 import Layout from './Layout';
 
 function App() {
@@ -19,18 +17,16 @@ function App() {
 
   return (
     <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
-      <CssBaseline />
-      <EventProvider>
+          <CssBaseline />
+        <EventProvider>
         <BrowserRouter>
           <Layout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
-            <Routes>
-              <Route path="/" element={<Login />} />
-              <Route path="register" element={<Registration />} />
-              <Route path="dashboard" element={<Event />} />
-            </Routes>
-          </Layout>
-        </BrowserRouter>
-      </EventProvider>
+              <Routes>
+                <Route path="dashboard/*" element={<Dashboard />} />
+              </Routes>
+            </Layout>
+          </BrowserRouter>
+        </EventProvider>
     </ThemeProvider>
   );
 }

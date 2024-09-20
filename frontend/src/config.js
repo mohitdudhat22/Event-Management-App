@@ -1,4 +1,4 @@
-import { styled } from "@mui/material";
+import { createTheme, styled } from "@mui/material";
 
 const inputStyle = {
     '& .MuiOutlinedInput-root': {
@@ -44,7 +44,23 @@ const inputStyle = {
     bottom: 0,
     left: 0,
     whiteSpace: 'nowrap',
-    width: '50%',
+    width: '100%',
   });
 
-  export { inputStyle, VisuallyHiddenInput };
+  const demoTheme = createTheme({
+    cssVariables: {
+      colorSchemeSelector: 'data-toolpad-color-scheme',
+    },
+    colorSchemes: { light: true, dark: true },
+    breakpoints: {
+      values: {
+        xs: 0,
+        sm: 600,
+        md: 600,
+        lg: 1200,
+        xl: 1536,
+      },
+    },
+  });
+
+  export { inputStyle, VisuallyHiddenInput, demoTheme };

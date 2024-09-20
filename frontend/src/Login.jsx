@@ -1,14 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TextField, Button, Typography, Box, Paper } from '@mui/material';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        // Handle login logic here
+    const navigate = useNavigate();
+    const getCookie = () => {
+        // get the user from session storage
+        const user = JSON.parse(sessionStorage.getItem('user'));
+        console.log(user);
+        return user;
     };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.post(`${API_BASE_URL}/api/login`, { email, password }, { withCredentials: true });
+            console.log(response.data);
+            navigate('/dashboard');
+        } catch (error) {
+            console.error('Login failed:', error);
+        }
+    };
+
+    useEffect(() => {
+        const cookie = getCookie();
+        console.log(cookie);
+    }, []);
 
     return (
         <Box sx={{ maxWidth: 300, margin: 'auto', mt: 4 }}>

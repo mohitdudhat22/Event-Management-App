@@ -1,44 +1,76 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
-import PropTypes from 'prop-types';
+import { useEventContext } from './context/EventContext';
+import { Box, Typography, Grid, Card, CardMedia, CardContent, Button, Chip, Avatar } from '@mui/material';
+import EventIcon from '@mui/icons-material/Event';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 
-function BookedEvents({ bookedEvents, cancelReservation }) {
-    return (
-      <div className="flex-1 p-4 bg-gray-100 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold mb-4 capitalize text-gray-700">Booked Events</h2>
-        {bookedEvents.map((event) => (
-          <div key={event.id} className="bg-white p-4 mb-4 rounded-lg shadow-sm hover:shadow-md transition duration-300 ease-in-out">
-            <img src={event.imageUrl} alt={event.title} className="w-full h-48 object-cover rounded-t-lg" />
-            <div className="p-4">
-              <h3 className="text-lg font-bold">{event.title}</h3>
-              <p className="text-gray-600">{format(parseISO(event.date), 'PPP')}</p>
-              <p className="text-gray-600">Max Attendees: {event.maxAttendees}</p>
-              <p className="text-gray-600">Tickets Booked: {event.ticketCount}</p>
-              <div className="flex space-x-2 mt-4">
-                <button
-                  onClick={() => cancelReservation(event.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full text-sm transition duration-300 ease-in-out"
-                >
-                  Cancel Reservation
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-BookedEvents.propTypes = {
-    bookedEvents: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.number.isRequired,
-        title: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-        maxAttendees: PropTypes.number.isRequired,
-        ticketCount: PropTypes.number.isRequired,
-        imageUrl: PropTypes.string.isRequired,
-    })).isRequired,
-    cancelReservation: PropTypes.func.isRequired,
-};
+function BookedEvents() {
+  const { events, cancelReservation } = useEventContext();
 
+  const placeholderImage = 'https://via.placeholder.com/400x200?text=No+Image+Available';
+
+  return (
+    <Box sx={{ flexGrow: 1, width: '100%', padding: 2 }}>
+      <Typography variant="h4" gutterBottom component="h1" align="center" sx={{ mb: 4 }}>
+        Your Booked Events
+      </Typography>
+      {events.booked.length === 0 ? (
+        <Typography variant="body1" align="center">
+          You haven't booked any events yet.
+        </Typography>
+      ) : (
+        <Grid container spacing={3} justifyContent="center">
+          {events.booked.map((event) => (
+            <Grid item xs={12} sm={6} md={4} key={event._id}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardMedia
+                  component="img"
+                  height="200"
+                  image={event.imageUrl || placeholderImage}
+                  alt={event.title}
+                />
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold', mb: 2 }}>
+                    {event.title}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <EventIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {format(parseISO(event.date), 'PPP')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <ConfirmationNumberIcon sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Tickets Booked: {event.ticketCount}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ mt: 'auto' }}>
+                    <Chip
+                      avatar={<Avatar>{event.ticketCount}</Avatar>}
+                      label="Tickets"
+                      color="primary"
+                      sx={{ mb: 2 }}
+                    />
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      color="error"
+                      onClick={() => cancelReservation(event.id)}
+                      sx={{ mt: 2 }}
+                    >
+                      Cancel Reservation
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
+}
 
 export default BookedEvents;
