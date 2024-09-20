@@ -8,6 +8,7 @@ import './App.css';
 import Dashboard from './Dashboard';
 import Layout from './Layout';
 import Login from './Login';
+import Registration from './Registration';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -25,7 +26,7 @@ function App() {
               <Routes>
                 <Route path="dashboard/*" element={<Dashboard />} />
                 <Route path="/" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+                <Route path="/register" element={<Registration />} />
               </Routes>
             </Layout>
           </BrowserRouter>
