@@ -8,6 +8,7 @@ import Registration from './Registration';
 import { lightTheme, darkTheme } from './theme';
 import './App.css';
 import DashboardLayoutNavigationLinks from './Dashboard';
+import { send } from './utils/Push'
 
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -17,6 +18,8 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    send("Push Notifications", "Push notification successfully sent to the browser! Check it out!")
+
   }, [darkMode]);
 
   const theme = createTheme(darkMode ? darkTheme : lightTheme);

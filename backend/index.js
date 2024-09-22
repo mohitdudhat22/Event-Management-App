@@ -9,7 +9,8 @@ const teamRoute = require('./routes/teamRoutes')
 const { initSocket } = require('./socket');
 const cookieParser = require('cookie-parser');
 const http = require('http');
-
+const webpush = require("web-push");
+const bodyParser = require('body-parser');
 dotenv.config();
 
 const app = express();
@@ -22,7 +23,6 @@ const allowedOrigins = [
     "http://localhost:5173",
     process.env.FRONTEND_URL
   ];
-  
   const corsOptions = {
     origin: function (origin, callback) {
       if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
@@ -46,9 +46,11 @@ const allowedOrigins = [
   });
 app.use(cookieParser());
 app.use(express.json());
+app.use(bodyParser.json());
 
 app.use('/api/events', require('./routes/EventsRoutes'));
 app.use('/api/', require('./routes/UserRoutes'));
+app.use('/api/notification', require('./routes/notificationRoutes'));
 
 app.get('/health-check', (req, res) => {
     return res.send("Server is On");
