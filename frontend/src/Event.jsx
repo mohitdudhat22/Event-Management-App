@@ -21,8 +21,8 @@ function Event() {
 
   const placeholderImage = 'https://via.placeholder.com/400x200?text=No+Image+Available';
   return (
-    <Container maxWidth={false} disableGutters sx={{ py: 4 }}>
-      <Grid container spacing={3} direction="column">
+    <Container maxWidth="lg" sx={{ py: 4 }}> {/* Changed to maxWidth="lg" and added padding */}
+      <Grid container spacing={4}>
         {['upcoming', 'today', 'past'].map((status, index) => (
           <Grid item xs={12} key={status}>
             <Box sx={{ 
@@ -62,36 +62,38 @@ function Event() {
                             bgcolor: ['#1e3a5f', '#1e4a3f', '#4a3c2e'][index],
                           }}
                         />
-                        <CardContent sx={{ flexGrow: 1 }}>
-                          <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
+                        <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                          <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
                             {event.title}
                           </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <CalendarToday sx={{ mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {format(parseISO(event.date), 'PPP')}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <AccessTime sx={{ mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {format(parseISO(event.date), 'p')}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <LocationOn sx={{ mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              {event.location || 'TBA'}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <PeopleAlt sx={{ mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2" color="text.secondary">
-                              Max Attendees: {event.maxAttendees}
-                            </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <CalendarToday sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2" color="text.secondary">
+                                {format(parseISO(event.date), 'PPP')}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <AccessTime sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2" color="text.secondary">
+                                {format(parseISO(event.date), 'p')}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <LocationOn sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2" color="text.secondary">
+                                {event.location || 'TBA'}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <PeopleAlt sx={{ mr: 1, color: 'text.secondary' }} />
+                              <Typography variant="body2" color="text.secondary">
+                                Max Attendees: {event.maxAttendees}
+                              </Typography>
+                            </Box>
                           </Box>
                         </CardContent>
-                        <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                        <CardActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
                           <Box>
                             {status !== 'past' && (
                               <Button
