@@ -19,6 +19,7 @@ import Login from './Login';
 import Registration from './Registration';
 import BookedEvents from './BookedEvents';
 import EventForm from './EventForm';
+import SendNotificationForm from './SendNotificationForm';
 
 // Create a theme for the app
 const demoTheme = createTheme({
@@ -58,6 +59,8 @@ function DashboardContent({ pathname }) {
         return <Login />;
       case '/dashboard/register':
         return <Registration />;
+      case '/dashboard/send-notification':
+        return <SendNotificationForm />;
       default:
         return <Typography>Dashboard content for {pathname}</Typography>;
     }
@@ -143,6 +146,11 @@ function DashboardLayoutNavigationLinks(props) {
       title: 'Register',
       icon: <PersonAddIcon />,
     },
+    {
+      segment: 'send-notification',
+      title: 'Send Notification',
+      icon: <PersonAddIcon />,
+    }
   ];
 
   return (

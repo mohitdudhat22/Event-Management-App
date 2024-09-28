@@ -9,14 +9,13 @@ import { EventProvider } from './context/EventContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-        <StyledEngineProvider injectFirst>
-          <EventProvider>
+    <StyledEngineProvider injectFirst>
+      <EventProvider>
         <BrowserRouter>
-    <App />
-    </BrowserRouter>
-    <Toaster position="top-center"
-  reverseOrder={false}/>
-        </EventProvider>
-  </StyledEngineProvider>
+          <App />
+        </BrowserRouter>
+        <Toaster position="top-center" reverseOrder={false} />
+      </EventProvider>
+    </StyledEngineProvider>
   </StrictMode>,
 )

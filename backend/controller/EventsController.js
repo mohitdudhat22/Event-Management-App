@@ -121,7 +121,6 @@ const buyTicket = async (req, res) => {
             return res.status(400).json({ error: 'No tickets to buy' });
         }
 
-        console.log(event.ticketsSold, "<<<<<< in Database Tickets Sold")
         res.json({ message: 'Ticket bought successfully', updatedEvent , newTicket });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -143,7 +142,6 @@ const getUserTickets = async (req, res) => {
             isCreator: createdEvents.some(event => event._id.toString() === ticket.event._id.toString())
         }));
 
-        console.log(ticketsWithEvents, "<<<<<< User Tickets with Event Details");
         res.json(ticketsWithEvents);
     } catch (err) {
         res.status(500).json({ message: err.message });

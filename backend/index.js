@@ -2,15 +2,11 @@ const express = require('express');
 const dotenv = require('dotenv');
 const dbConnect = require('./config/dbConnect');
 const cors = require('cors');
-const taskRouter = require('./routes/EventsRoutes');
-const authRouter = require('./routes/UserRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
-const teamRoute = require('./routes/teamRoutes')
 const { initSocket } = require('./socket');
 const cookieParser = require('cookie-parser');
 const http = require('http');
-const webpush = require("web-push");
 const bodyParser = require('body-parser');
+const notificationRoutes = require('./routes/notificationRoutes.js');
 dotenv.config();
 
 const app = express();
@@ -48,9 +44,9 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(bodyParser.json());
 
+app.use('/api/notifications', notificationRoutes);  
 app.use('/api/events', require('./routes/EventsRoutes'));
 app.use('/api/', require('./routes/UserRoutes'));
-app.use('/api/notification', require('./routes/notificationRoutes'));
 
 app.get('/health-check', (req, res) => {
     return res.send("Server is On");

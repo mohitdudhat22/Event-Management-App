@@ -1,8 +1,10 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { format, isAfter, isBefore, isValid, parseISO, startOfDay } from 'date-fns';
 import PropTypes from 'prop-types';
+import { getMessaging, onMessage } from '@firebase/messaging';
+import { requestFCMToken } from '../utils/firebaseUtils';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const EventContext = createContext();
@@ -15,11 +17,43 @@ export const EventProvider = ({ children }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [errors, setErrors] = useState({});
+  const [fcmToken, setFcmToken] = useState('')
 
   useEffect(() => {
+    const messaging = getMessaging();
+
+    // Request the FCM token initially
+    const initializeFCM = async () => {
+      try {
+        const token = await requestFCMToken();
+        console.log('FCM Token from context:', token);
+        setFcmToken(token);
+      } catch (error) {
+        console.error('Error fetching FCM token:', error);
+      }
+    };
+
+    initializeFCM();
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('Foreground message:', payload);
+      // Handle the received message
+    });
     fetchEvents();
     getUserTickets();
+    return() =>{
+      unsubscribe();
+    }
   }, []);
+
+  const createNewFCM = async () => {
+    try {
+      const newToken = await requestFCMToken();
+      console.log('New FCM Token:(onRefresh)', newToken);
+      setFcmToken(newToken);
+    } catch (error) {
+      console.error('Error generating new FCM token:', error);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -319,6 +353,8 @@ export const EventProvider = ({ children }) => {
     editId,
     setEditId,
     errors,
+    fcmToken,
+    setFcmToken,
     editEvent,
     setErrors,
     fetchEvents,
@@ -329,7 +365,8 @@ export const EventProvider = ({ children }) => {
     updateEvent,
     deleteEvent,
     reserveTicket,
-    cancelReservation
+    cancelReservation,
+    createNewFCM
   };
 
   return <EventContext.Provider value={value}>{children}</EventContext.Provider>;
