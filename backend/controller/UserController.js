@@ -51,13 +51,15 @@ const login = async (req, res) => {
     const payload = {
       user: {
         id: user.id,
-        role: user.role
+        role: user.role,
+        username: user.username,
+        email: user.email
       }
     };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
       res.cookie('token', token, { httpOnly: true, secure: true });
-      res.json({ token });
+      res.json({ token, user:payload.user });
     });
   } catch (err) {
     console.error(err.message);

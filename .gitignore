@@ -31,4 +31,4 @@ backend/.env
 backend/dist/
 backend/build/
 
-backend/task-manegement-app.json
+backend/firebaseJsonSDK.json

@@ -12,19 +12,18 @@ const {
   getUserTickets,
   getEventTickets
 } = require('../controller/EventsController');
-const authMiddleware = require('../middleware/authMiddleware');
-
-router.get('/', getAllEvents);
-router.get('/:id', getEventById);
-router.post('/', authMiddleware, createEvent);
-router.put('/:id', updateEvent);
-router.delete('/:id', deleteEvent);
-router.post('/buy/:id',authMiddleware, buyTicket);
-router.get('/user/tickets',authMiddleware ,getUserTickets)
+const {authorize} = require('../middleware/roleMiddleware');
+router.get('/',authorize(['admin', 'user']), getAllEvents);
+router.get('/:id',authorize(['admin', 'user']), getEventById);
+router.post('/',authorize(['admin']), createEvent);
+router.put('/:id',authorize(['admin']), updateEvent);
+router.delete('/:id',authorize(['admin']), deleteEvent);
+router.post('/buy/:id',authorize(['admin', 'user']), buyTicket);
+router.get('/user/tickets', authorize(['admin', 'user']),getUserTickets)
 
 //give us the tickets of the event (different Persons)
-router.get('/tickets/:id', getEventTickets);
+router.get('/tickets/:id',authorize(['admin', 'user']), getEventTickets);
 
 
-router.post('/:id/cancel', cancelReservation);
+router.post('/:id/cancel',authorize(['admin', 'user']), cancelReservation);
 module.exports = router;

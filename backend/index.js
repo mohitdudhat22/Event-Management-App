@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const http = require('http');
 const bodyParser = require('body-parser');
 const notificationRoutes = require('./routes/notificationRoutes.js');
+const authMiddleware = require('./middleware/authMiddleware.js');
 dotenv.config();
 
 const app = express();
@@ -45,7 +46,7 @@ app.use(express.json());
 app.use(bodyParser.json());
 
 app.use('/api/notifications', notificationRoutes);  
-app.use('/api/events', require('./routes/EventsRoutes'));
+app.use('/api/events',authMiddleware, require('./routes/EventsRoutes'));
 app.use('/api/', require('./routes/UserRoutes'));
 
 app.get('/health-check', (req, res) => {
