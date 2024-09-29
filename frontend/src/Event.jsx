@@ -3,6 +3,7 @@ import { EventAvailable, PeopleAlt, Edit, Delete, CalendarToday, AccessTime, Loc
 import { useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { useEventContext } from "./context/EventContext";
+import { useNavigate } from "react-router-dom";
 
 function Event() {
   const { 
@@ -18,7 +19,7 @@ function Event() {
     fetchEvents();
     getUserTickets();
   }, []);
-
+  const navigate = useNavigate();
   const placeholderImage = 'https://via.placeholder.com/400x200?text=No+Image+Available';
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}> {/* Changed to maxWidth="lg" and added padding */}
@@ -113,7 +114,7 @@ function Event() {
                               size="small"
                               variant="outlined"
                               color="warning"
-                              onClick={() => editEvent(event._id, status)}
+                              onClick={() => {editEvent(event._id, status);navigate(`/dashboard/events/new`)}}
                               startIcon={<Edit />}
                               sx={{ mr: 1 }}
                             >

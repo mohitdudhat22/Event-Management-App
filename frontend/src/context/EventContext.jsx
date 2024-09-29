@@ -267,7 +267,7 @@ export const EventProvider = ({ children }) => {
 
   const cancelReservation = async (id) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/events/${id}/cancel`, {}, {
+      const response = await axios.post(`${API_BASE_URL}/api/events/${id}/cancel`, {}, {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json',

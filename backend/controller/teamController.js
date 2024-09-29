@@ -4,7 +4,6 @@ const UserModel = require('../models/User');
 
 // Create Task (Admin or User)
 const createTask = async (req, res) => {
-    console.log("its create body" , req.body)
     try {
         const { Task, Description, UserId, Role } = req.body;
         const user = await UserModel.findById(UserId);

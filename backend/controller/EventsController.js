@@ -23,34 +23,32 @@ const createEvent = async (req, res) => {
 
     const { title, description, date, location, maxAttendees, status} = req.body;
     const image = req.file ? req.file.path : null; 
-    console.log(image, "image", "<<<<<<<<<<<<<<<<<<<this is create");
     try {
         const newEvent = await Event.create({ title, description, date, location, maxAttendees, image, creator: req.user.id, status, ticketsSold: 0 , tickets: [] , status});
         newEvent.save();
-        console.log(newEvent , "<<<<<<<<<<<<<<<<<<<<<<<<<<<< newEvent");
         res.status(201).json({ message: 'Event created successfully', newEvent });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
-
 const updateEvent = async (req, res) => {
     const id = req.params.id;
+    const newImage = req.file ? req.file.path : null;
     const { title, description, date, location, maxAttendees, status } = req.body;
-    const image = req.file ? req.file.path : null;
 
-    console.log(image, "image", "<<<<<<<<<<<<<<<<<<<this is update");
     try {
-        // Use { new: true } to return the updated document
-        const updatedEvent = await Event.findByIdAndUpdate(
-            id,
-            { title, description, date, location, maxAttendees, image, status },
-            { new: true } // Returns the updated document
-        );
-
-        if (!updatedEvent) {
+        const existingEvent = await Event.findById(id);
+        if (!existingEvent) {
             return res.status(404).json({ message: 'Event not found' });
         }
+
+        const imageToUpdate = newImage || existingEvent.image;
+
+        const updatedEvent = await Event.findByIdAndUpdate(
+            id,
+            { title, description, date, location, maxAttendees, image: imageToUpdate, status },
+            { new: true }
+        );
 
         res.json({ message: 'Event updated successfully', updatedEvent });
     } catch (error) {
@@ -58,6 +56,7 @@ const updateEvent = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
 
 
 const deleteEvent = async (req, res) => {
@@ -73,36 +72,39 @@ const deleteEvent = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 const reserveTicket = async (req, res) => {
     const id = req.params.id;
+
     try {
         const event = await Event.findById(id);
+        console.log(event); 
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
         }
-        if (event.maxAttendees <= event.ticketCount) {
+        if (event.ticketSold >= event.maxAttendees) {
             return res.status(400).json({ error: 'Event is full' });
         }
-        event.ticketCount++;
-        await event.save();
-        res.json({ message: 'Ticket reserved successfully', event });
+        event.ticketSold++;
+        const updatedEvent = await Event.findByIdAndUpdate(id, { ticketSold: event.ticketSold },{new: true});
+        res.json({ message: 'Ticket reserved successfully', updatedEvent });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
+
 const cancelReservation = async (req, res) => {
     const id = req.params.id;
+    console.id
     try {
         const event = await Event.findById(id);
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
         }
-        if (event.ticketCount <= 0) {
+        if (event.ticketSold >= event.maxAttendees) {
             return res.status(400).json({ error: 'No tickets to cancel' });
         }
-        event.ticketCount--;
+        event.ticketSold++;
         const updatedEvent = await event.save();
         res.json({ message: 'Reservation canceled successfully', updatedEvent });
     } catch (error) {
@@ -113,10 +115,16 @@ const cancelReservation = async (req, res) => {
 const buyTicket = async (req, res) => {
     const id = req.params.id;
     try {
-        const event = await Event.findById(id);
+        const event = await Event.findById(id).populate('tickets');
+        console.log(event)
+        if (!event) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
+        if (event.ticketCount <= 0) {
+            return res.status(400).json({ error: 'No tickets to buy' });
+        }
         const user = await User.findById(req.user.id);
         const ticket = await Ticket.findOne({ event: event.id, user: user.id });
-
         if (ticket) {
             event.ticketsSold++;
             ticket.quantity++;
@@ -130,12 +138,6 @@ const buyTicket = async (req, res) => {
         event.ticketsSold++;
         const updatedEvent = await event.save();
         await newTicket.save();
-        if (!event) {
-            return res.status(404).json({ error: 'Event not found' });
-        }
-        if (event.ticketCount <= 0) {
-            return res.status(400).json({ error: 'No tickets to buy' });
-        }
 
         res.json({ message: 'Ticket bought successfully', updatedEvent , newTicket });
     } catch (error) {
@@ -157,7 +159,6 @@ const getUserTickets = async (req, res) => {
             event: ticket.event,
             isCreator: createdEvents.some(event => event._id.toString() === ticket.event._id.toString())
         }));
-
         res.json(ticketsWithEvents);
     } catch (err) {
         res.status(500).json({ message: err.message });

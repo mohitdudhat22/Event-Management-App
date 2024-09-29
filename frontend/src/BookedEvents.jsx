@@ -57,7 +57,7 @@ function BookedEvents() {
                       fullWidth
                       variant="contained"
                       color="error"
-                      onClick={() => cancelReservation(event.id)}
+                      onClick={() => cancelReservation(event._id)}
                     >
                       Cancel Reservation
                     </Button>

@@ -26,7 +26,6 @@ const register = async (req, res) => {
         role: user.role
       }
     };
-    console.log(user , "<<<<<<<<<<<<< Register Payload");
     jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
       res.cookie('token', token, { httpOnly: true, secure: true });

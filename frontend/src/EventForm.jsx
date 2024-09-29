@@ -1,6 +1,7 @@
 import { Box, TextField, Button, Typography, Paper, Container, Avatar } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { useEventContext } from './context/EventContext';
+import { useNavigate } from 'react-router-dom';
 
 function EventForm() {
   const { event, setEvent, errors, handleSubmit, isEditing } = useEventContext();
@@ -24,7 +25,7 @@ function EventForm() {
       reader.readAsDataURL(file);
     }
   };
-
+  const navigate = useNavigate();
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -38,6 +39,7 @@ function EventForm() {
       formData.append('image', imageFile);
     }
     await handleSubmit(formData);
+    navigate('/dashboard/events');
   };
 
   const handleDateChange = (e) => {

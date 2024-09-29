@@ -15,18 +15,6 @@ const upload = require('../cloudinary/multer');
 const {authorize} = require('../middleware/roleMiddleware');
 router.get('/',authorize(['admin', 'user']), getAllEvents);
 router.get('/:id',authorize(['admin', 'user']), getEventById);
-// router.post('/', async(req, res, next) => {
-//   upload.any()(req, res, function (err) {
-//     if (err) {
-//       return res.status(400).json({ message: 'File upload failed', error: err.message });
-//     }
-
-//     console.log('All fields:', req.body); 
-//     console.log('All files:', req.files); 
-
-//     next();
-//   });
-// }, createEvent);
 router.post('/',upload.single('image'), createEvent); 
 router.put('/:id',upload.single('image'), updateEvent);
 router.delete('/:id',authorize(['admin']), deleteEvent);
