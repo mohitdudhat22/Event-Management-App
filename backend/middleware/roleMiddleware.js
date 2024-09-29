@@ -23,12 +23,13 @@ const authenticate = async (req, res, next) => {
 
 const authorize = (roles) => {
   return (req, res, next) => {
-    console.log(req.user.role, "req.user from role");
+    console.log(req.user);
+    console.log(roles.includes(req.user.role));
     if (!req.user) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user.role)) { 
       return res.status(403).json({ message: 'Access denied' });
     }
 

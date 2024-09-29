@@ -27,7 +27,7 @@ function BookedEvents() {
                 <CardMedia
                   component="img"
                   height="200"
-                  image={event.imageUrl || placeholderImage}
+                  image={event.image || placeholderImage}
                   alt={event.title}
                 />
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>

@@ -6,7 +6,7 @@ const EventSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   location: { type: String, required: true },
   maxAttendees: { type: Number, required: true },
-  imageUrl: { type: String },
+  image: { type: String,  },
   status: { type: String, enum: ['upcoming', 'today', 'past'], required: true },
   ticketsSold: { type: Number, default: 0 },
   creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

@@ -1,7 +1,8 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const dotenv = require('dotenv');
+dotenv.config();
 const register = async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
@@ -26,7 +27,7 @@ const register = async (req, res) => {
       }
     };
     console.log(user , "<<<<<<<<<<<<< Register Payload");
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+    jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' }, (err, token) => {
       if (err) throw err;
       res.cookie('token', token, { httpOnly: true, secure: true });
       res.json({ token , user , message: "User registered successfully"});
@@ -36,33 +37,38 @@ const register = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
-
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
     let user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    const payload = {
-      user: {
-        id: user.id,
-        role: user.role,
-        username: user.username,
-        email: user.email
+
+    const payload = {id: user.id, username: user.username, email: user.email, role: user.role };
+
+    jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' }, (err, token) => { 
+      if (err) {
+        console.error('Error signing token:', err);
+        return res.status(500).json({ message: 'Server error' });
       }
-    };
-    jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
-      if (err) throw err;
-      res.cookie('token', token, { httpOnly: true, secure: true });
-      res.json({ token, user:payload.user });
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'Strict',
+      };
+      res.cookie('token', token, cookieOptions);
+      res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role }, message: 'Logged in successfully' });
     });
+    
   } catch (err) {
-    console.error(err.message);
+    console.error('Login error:', err.message);
     res.status(500).send('Server error');
   }
 };

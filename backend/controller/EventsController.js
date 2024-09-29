@@ -20,9 +20,12 @@ const getEventById = async (req, res) => {
 };
 
 const createEvent = async (req, res) => {
-    const { title, description, date, location, maxAttendees, imageUrl, status} = req.body;
+
+    const { title, description, date, location, maxAttendees, status} = req.body;
+    const image = req.file ? req.file.path : null; 
+    console.log(image, "image", "<<<<<<<<<<<<<<<<<<<this is create");
     try {
-        const newEvent = await Event.create({ title, description, date, location, maxAttendees, imageUrl, creator: req.user.id, status, ticketsSold: 0 , tickets: [] , status});
+        const newEvent = await Event.create({ title, description, date, location, maxAttendees, image, creator: req.user.id, status, ticketsSold: 0 , tickets: [] , status});
         newEvent.save();
         console.log(newEvent , "<<<<<<<<<<<<<<<<<<<<<<<<<<<< newEvent");
         res.status(201).json({ message: 'Event created successfully', newEvent });
@@ -33,16 +36,29 @@ const createEvent = async (req, res) => {
 
 const updateEvent = async (req, res) => {
     const id = req.params.id;
-    const { title, description, date, location, maxAttendees, imageUrl, status} = req.body;
+    const { title, description, date, location, maxAttendees, status } = req.body;
+    const image = req.file ? req.file.path : null;
 
+    console.log(image, "image", "<<<<<<<<<<<<<<<<<<<this is update");
     try {
-       const updatedEvent = await Event.findByIdAndUpdate(id, { title, description, date, location, maxAttendees, imageUrl, status});
-       updatedEvent.save();
+        // Use { new: true } to return the updated document
+        const updatedEvent = await Event.findByIdAndUpdate(
+            id,
+            { title, description, date, location, maxAttendees, image, status },
+            { new: true } // Returns the updated document
+        );
+
+        if (!updatedEvent) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
         res.json({ message: 'Event updated successfully', updatedEvent });
     } catch (error) {
+        console.error("Error updating event:", error);
         res.status(500).json({ error: error.message });
     }
 };
+
 
 const deleteEvent = async (req, res) => {
     const id = req.params.id;

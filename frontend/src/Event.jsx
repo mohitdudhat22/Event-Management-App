@@ -50,18 +50,19 @@ function Event() {
                           boxShadow: 6,
                         },
                       }}>
-                        <CardMedia
-                          component="img"
-                          height="200"
-                          image={event.imageUrl && event.imageUrl !== "" 
-                            ? event.imageUrl 
-                            : placeholderImage}
-                          alt={event.title}
-                          sx={{
-                            objectFit: 'cover',
-                            bgcolor: ['#1e3a5f', '#1e4a3f', '#4a3c2e'][index],
-                          }}
-                        />
+                  <CardMedia
+  component="img"
+  height="200"
+  image={event.image && event.image !== "" 
+    ? event.image 
+    : placeholderImage}
+  alt={event.title}
+  sx={{
+    objectFit: 'cover',
+    bgcolor: ['#1e3a5f', '#1e4a3f', '#4a3c2e'][index],
+  }}
+/>
+
                         <CardContent sx={{ flexGrow: 1, p: 3 }}>
                           <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
                             {event.title}

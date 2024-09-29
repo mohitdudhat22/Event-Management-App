@@ -5,6 +5,7 @@ import { format, isAfter, isBefore, isValid, parseISO, startOfDay } from 'date-f
 import PropTypes from 'prop-types';
 import { getMessaging, onMessage } from '@firebase/messaging';
 import { requestFCMToken } from '../utils/firebaseUtils';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 const EventContext = createContext();
@@ -13,16 +14,15 @@ export const useEventContext = () => useContext(EventContext);
 
 export const EventProvider = ({ children }) => {
   const [events, setEvents] = useState({ upcoming: [], today: [], past: [], booked: [] });
-  const [event, setEvent] = useState({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
+  const [event, setEvent] = useState({ title: "", description: "", date: "", location: "", maxAttendees: "", image: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [errors, setErrors] = useState({});
-  const [fcmToken, setFcmToken] = useState('')
+  const [fcmToken, setFcmToken] = useState('');
 
   useEffect(() => {
     const messaging = getMessaging();
 
-    // Request the FCM token initially
     const initializeFCM = async () => {
       try {
         const token = await requestFCMToken();
@@ -36,11 +36,10 @@ export const EventProvider = ({ children }) => {
     initializeFCM();
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log('Foreground message:', payload);
-      // Handle the received message
     });
     fetchEvents();
     getUserTickets();
-    return() =>{
+    return () => {
       unsubscribe();
     }
   }, []);
@@ -57,7 +56,13 @@ export const EventProvider = ({ children }) => {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/events`);
+      const response = await axios.get(`${API_BASE_URL}/api/events`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       console.log(response.data, "response.data");
       const formattedEvents = response.data.events.map(event => ({
         ...event,
@@ -72,14 +77,20 @@ export const EventProvider = ({ children }) => {
 
   const getUserTickets = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/events/user/tickets`, { withCredentials: true });
+      const response = await axios.get(`${API_BASE_URL}/api/events/user/tickets`, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       const userTickets = response.data;
       const bookedEvents = userTickets.map(ticket => ({
         _id: ticket.event._id,
         title: ticket.event.title,
         date: ticket.event.date,
         location: ticket.event.location,
-        imageUrl: ticket.event.imageUrl,
+        image: ticket.event.image,
         ticketCount: ticket.quantity,
         isCreator: ticket.isCreator
       }));
@@ -136,70 +147,68 @@ export const EventProvider = ({ children }) => {
     }
   };
 
-  const addEvent = async () => {
-    console.log(event, "event");
+  const addEvent = async (formData) => {
     try {
-      const eventData = {
-          ...event,
-          maxAttendees: parseInt(event.maxAttendees, 10),
-          imageUrl: event.imageUrl || "",
-          date: parseISO(event.date).toISOString(),
-          status: determineEventStatus(event.date), 
+      const response = await axios.post(`${API_BASE_URL}/api/events`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        withCredentials: true,
+      });
+      const newEvent = response.data;
+      setEvents(prev => {
+        const updatedCategory = prev[newEvent.status] ? [...prev[newEvent.status], newEvent] : [newEvent];
+        return {
+          ...prev,
+          [newEvent.status]: updatedCategory
         };
-        fetchEvents();
-        console.log(eventData, "eventData");
-
-        const response = await axios.post(`${API_BASE_URL}/api/events`, eventData, {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          withCredentials: true,
-        });
-        const newEvent = response.data;
-        setEvents(prev => {
-          const updatedCategory = prev[newEvent.status] ? [...prev[newEvent.status], newEvent] : [newEvent];
-          return {
-            ...prev,
-            [newEvent.status]: updatedCategory
-          };
-        });
-        setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", imageUrl: "" });
-        toast.success("Event added successfully!");
-        fetchEvents();
-      } catch (error) {
-        console.error("Error adding event:", error);
-        toast.error(error.response?.data?.message || "Failed to add event");
+      });
+      setEvent({ title: "", description: "", date: "", location: "", maxAttendees: "", image: "" });
+      toast.success("Event added successfully!");
+      fetchEvents();
+    } catch (error) {
+      console.error("Error adding event:", error);
+      toast.error(error.response?.data?.message || "Failed to add event");
     }
   };
 
-
-  const updateEvent = async (id, eventData) => {
+  const updateEvent = async (id, formData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/events/${id}`, eventData, {
-        withCredentials: true,
+      const response = await axios.put(`${API_BASE_URL}/api/events/${id}`, formData, {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        withCredentials: true,
       });
+      
       const updatedEvent = response.data.updatedEvent;
+  
       setEvents(prev => ({
-        ...prev,  
+        ...prev,
         upcoming: prev.upcoming.map(item => item._id === id ? updatedEvent : item),
         today: prev.today.map(item => item._id === id ? updatedEvent : item),
         past: prev.past.map(item => item._id === id ? updatedEvent : item)
       }));
+  
       fetchEvents();
       toast.success("Event updated successfully!");
+      
     } catch (error) {
       console.error("Error updating event:", error);
-      toast.error("Failed to update event");
+      const errorMessage = error.response?.data?.message || "Failed to update event";
+      toast.error(errorMessage);
     }
   };
 
   const deleteEvent = async (id, status) => {
     try {
       await axios.delete(`${API_BASE_URL}/api/events/${id}`, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       setEvents(prev => ({
         ...prev,
@@ -220,7 +229,11 @@ export const EventProvider = ({ children }) => {
     console.log("reserveTicket", id, status);
     try {
       const response = await axios.post(`${API_BASE_URL}/api/events/buy/${id}`, {}, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       const updatedEvent = response.data.event;
       setEvents(prev => {
@@ -255,7 +268,11 @@ export const EventProvider = ({ children }) => {
   const cancelReservation = async (id) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/events/${id}/cancel`, {}, {
-        withCredentials: true
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       const updatedEvent = response.data;
       setEvents(prev => {
@@ -283,7 +300,6 @@ export const EventProvider = ({ children }) => {
       ? "" 
       : "Max attendees must be a positive number";
     
-    // Date validation
     if (!event.date) {
       tempErrors.date = "Date is required";
     } else {
@@ -298,19 +314,6 @@ export const EventProvider = ({ children }) => {
     setErrors(tempErrors);
     return Object.values(tempErrors).every(x => x === "");
   };
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      if (isEditing) {
-        updateEvent(event._id, event);
-      } else {
-        addEvent();
-      }
-    } else {
-      toast.error("Please fill all required fields correctly.");
-    }
-  };
-
 
   const editEvent = (id, status) => {
     setIsEditing(true);
@@ -319,14 +322,17 @@ export const EventProvider = ({ children }) => {
     setEvent(eventToEdit);
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEvent({ ...event, imageUrl: reader.result });
-      };
-      reader.readAsDataURL(file);
+  const handleSubmit = async (formData) => {
+    if (validateForm()) {
+      if (isEditing) {
+        await updateEvent(editId, formData);
+      } else {
+        await addEvent(formData);
+      }
+      setIsEditing(false);
+      setEditId(null);
+    } else {
+      toast.error("Please fill all required fields correctly.");
     }
   };
 
@@ -343,7 +349,6 @@ export const EventProvider = ({ children }) => {
   const value = {
     handleSubmit,
     handleDateChange,
-    handleImageUpload,
     events,
     setEvents,
     event,
@@ -361,8 +366,6 @@ export const EventProvider = ({ children }) => {
     getUserTickets,
     categorizeEvents,
     determineEventStatus,
-    addEvent,
-    updateEvent,
     deleteEvent,
     reserveTicket,
     cancelReservation,
@@ -375,4 +378,5 @@ export const EventProvider = ({ children }) => {
 EventProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };
-  
+
+export default EventProvider;

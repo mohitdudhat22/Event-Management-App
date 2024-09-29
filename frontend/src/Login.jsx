@@ -9,7 +9,6 @@ function Login() {
     const [password, setPassword] = useState('m');
     const navigate = useNavigate();
     const getCookie = () => {
-        // get the user from session storage
         const user = JSON.parse(sessionStorage.getItem('user'));
         console.log(user);
         return user;
@@ -18,8 +17,10 @@ function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post(`${API_BASE_URL}/api/login`, { email, password }, { withCredentials: true });
+            const response = await axios.post(`${API_BASE_URL}/api/login`, { email, password }, { withCredentials: true, headers: { 'Content-Type': 'application/json' } });
             console.log(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            localStorage.setItem('token', response.data.token);
             navigate('/dashboard');
         } catch (error) {
             console.error('Login failed:', error);
